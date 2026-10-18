@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор Шеннона-Хартли</title>
+    <style>
+        :root {
+            --surface-0: #05070C;
+            --surface-1: #0A0D12;
+            --surface-2: #0F131C;
+            --surface-3: #161D2B;
+            --surface-4: #1E2636;
+            --accent: #38BDF8;
+            --accent-muted: #1E3A5F;
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --chart-grid: rgba(255, 255, 255, 0.06);
+            --chart-tick: #8A94A6;
+            --chart-area: rgba(56, 189, 248, 0.14);
+            --radius-sm: 0.5rem;
+            --radius-md: 1rem;
+            --radius-pill: 999px;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body[data-theme="light"] {
+            --surface-0: #EEF2F7;
+            --surface-1: #FFFFFF;
+            --surface-2: #FFFFFF;
+            --surface-3: #F1F5F9;
+            --surface-4: #E2E8F0;
+            --accent: #0369A1;
+            --accent-muted: #CBE4F8;
+            --text-primary: #0F172A;
+            --text-secondary: #5B6B7C;
+            --chart-grid: rgba(15, 23, 42, 0.08);
+            --chart-tick: #64748B;
+            --chart-area: rgba(3, 105, 161, 0.10);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--surface-0);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: var(--spacing-md);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--surface-2);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .ghost-btn {
+            background: var(--surface-3);
+            border: 1.5px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--font-body);
+            white-space: nowrap;
+        }
+
+        .ghost-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .calculator-panel,
+        .charts-panel {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: var(--spacing-xs);
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .formula-display {
+            background: var(--surface-3);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--spacing-lg);
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: clamp(0.875rem, 2vw, 1rem);
+        }
+
+        .input-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--spacing-xs);
+            align-items: center;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background: var(--surface-3);
+            border: 2px solid transparent;
+            border-radius: var(--radius-sm);
+            padding: 0.75rem var(--spacing-sm);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: var(--font-body);
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--surface-4);
+        }
+
+        select {
+            background: var(--surface-3);
+            border: 2px solid transparent;
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.6rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .unit {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            padding: 0 var(--spacing-sm);
+            white-space: nowrap;
+        }
+
+        .radio-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-xs);
+        }
+
+        .radio-group.mode-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .radio-option {
+            position: relative;
+        }
+
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .radio-option label {
+            display: block;
+            background: var(--surface-3);
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            color: var(--text-primary);
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: var(--accent-muted);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .preset-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .chip {
+            background: var(--surface-3);
+            border: 1.5px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: var(--font-body);
+        }
+
+        .chip:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .calculate-btn {
+            width: 100%;
+            background: var(--accent);
+            color: var(--surface-0);
+            border: none;
+            border-radius: var(--radius-pill);
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: var(--spacing-md);
+            font-family: var(--font-body);
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+        }
+
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-row {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-xs);
+        }
+
+        .secondary-btn {
+            flex: 1;
+            background: var(--surface-3);
+            border: 1.5px solid transparent;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            padding: 0.7rem 0.8rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+            font-family: var(--font-body);
+            transition: all 0.15s ease;
+        }
+
+        .secondary-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .mini-btn {
+            background: var(--surface-3);
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .mini-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .result {
+            margin-top: var(--spacing-lg);
+            background: var(--surface-3);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-lg);
+            border-left: 4px solid var(--accent);
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .result-value {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            color: var(--accent);
+            font-family: var(--font-display);
+            letter-spacing: -0.02em;
+        }
+
+        .result-details {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--surface-4);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #EF4444;
+        }
+
+        .error .result-value {
+            color: #EF4444;
+        }
+
+        .mod-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .mod-table th,
+        .mod-table td {
+            padding: 0.4rem 0.55rem;
+            text-align: left;
+            border-bottom: 1px solid var(--surface-4);
+        }
+
+        .mod-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .mod-table tr.best td {
+            color: var(--accent);
+            font-weight: 600;
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        body[data-theme="light"] .mod-table tr.best td {
+            background: rgba(3, 105, 161, 0.07);
+        }
+
+        .mod-table tr:not(.att) td {
+            opacity: 0.45;
+        }
+
+        .mod-note {
+            margin-top: 0.6rem;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .history {
+            margin-top: var(--spacing-xs);
+        }
+
+        .chart-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-xs);
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-head .chart-title {
+            margin-bottom: 0;
+        }
+
+        .chart-title {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            text-align: center;
+        }
+
+        .chart-head .chart-title {
+            text-align: left;
+        }
+
+        .hint {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .history-item {
+            text-align: left;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: var(--surface-3);
+            border: 1.5px solid transparent;
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.7rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            transition: all 0.15s ease;
+            font-family: var(--font-body);
+        }
+
+        .history-item:hover {
+            border-color: var(--accent);
+        }
+
+        .hi-time {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-hint {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            padding: 0.35rem 0.1rem;
+        }
+
+        .chart-container {
+            background: var(--surface-3);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            min-height: 120px;
+        }
+
+        .chart-host {
+            position: relative;
+        }
+
+        .chart-svg {
+            width: 100%;
+            display: block;
+        }
+
+        .chart-svg text {
+            font-family: var(--font-body);
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            top: 10px;
+            background: var(--surface-4);
+            border: 1px solid var(--accent-muted);
+            border-radius: var(--radius-sm);
+            padding: 0.45rem 0.6rem;
+            font-size: 0.72rem;
+            line-height: 1.55;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.12s ease;
+            z-index: 10;
+            white-space: nowrap;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+
+        .chart-tooltip.show {
+            opacity: 1;
+        }
+
+        body[data-theme="light"] .chart-tooltip {
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+        }
+
+        .tt-x {
+            color: var(--text-secondary);
+            margin-bottom: 0.15rem;
+            white-space: nowrap;
+        }
+
+        .tt-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+        }
+
+        .tt-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex: none;
+            display: inline-block;
+        }
+
+        .scale-toggle {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 0.2rem;
+        }
+
+        .scale-toggle .radio-option label {
+            padding: 0.25rem 0.55rem;
+            font-size: 0.72rem;
+            border-width: 1.5px;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.45rem;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-item .dot,
+        .compare-item .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex: none;
+        }
+
+        .compare-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .compare-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--surface-3);
+            border: 1.5px solid transparent;
+            border-radius: var(--radius-sm);
+            padding: 0.4rem 0.6rem;
+        }
+
+        body[data-theme="light"] .compare-item {
+            background: #FFFFFF;
+        }
+
+        .compare-item .ci-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .compare-item .ci-del:hover {
+            color: #EF4444;
+            border-color: #EF4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <div>
+                <h1>Калькулятор Шеннона-Хартли</h1>
+                <p class="subtitle">Расчёт пропускной способности канала связи</p>
+            </div>
+            <button id="theme-toggle" class="ghost-btn" type="button">Светлая тема</button>
+        </div>
+
+        <div class="formula-display">
+            C = B × log₂(1 + S/N)
+        </div>
+
+        <div class="main-grid">
+            <div class="calculator-panel">
+                <div class="input-group">
+                    <label>Режим расчёта</label>
+                    <div class="radio-group mode-3">
+                        <div class="radio-option">
+                            <input type="radio" id="mode-c" name="calc-mode" value="C" checked>
+                            <label for="mode-c">Найти C</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="mode-b" name="calc-mode" value="B">
+                            <label for="mode-b">Найти B</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="mode-snr" name="calc-mode" value="snr">
+                            <label for="mode-snr">Найти S/N</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Пресеты каналов</label>
+                    <div class="preset-chips" id="preset-chips"></div>
+                </div>
+
+                <div class="input-group" id="group-bandwidth">
+                    <label for="bandwidth">Ширина полосы пропускания (B)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="bandwidth" value="1000000" min="0" step="1000">
+                        <span class="unit">Гц</span>
+                    </div>
+                </div>
+
+                <div class="input-group" id="group-snr">
+                    <label>Формат отношения сигнал/шум</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="snr-ratio" name="snr-format" value="ratio" checked>
+                            <label for="snr-ratio">Раз (S/N)</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="snr-db" name="snr-format" value="db">
+                            <label for="snr-db">дБ</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group" id="group-snr-value">
+                    <label for="snr">Отношение сигнал/шум (S/N)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="snr" value="100" min="0" step="0.1">
+                        <span class="unit" id="snr-unit">раз</span>
+                    </div>
+                </div>
+
+                <div class="input-group" id="group-target">
+                    <label for="target-capacity">Целевая пропускная способность (C)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="target-capacity" value="10" min="0" step="0.1">
+                        <select id="target-unit">
+                            <option value="bits">бит/с</option>
+                            <option value="k">Кбит/с</option>
+                            <option value="M" selected>Мбит/с</option>
+                            <option value="G">Гбит/с</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="calculate-btn" id="calc-btn" type="button">Вычислить</button>
+
+                <div class="action-row">
+                    <button class="secondary-btn" id="copy-result-btn" type="button">Копировать результат</button>
+                    <button class="secondary-btn" id="share-btn" type="button">Копировать ссылку</button>
+                </div>
+
+                <div class="result" id="result">
+                    <div class="result-label" id="result-label">Пропускная способность канала</div>
+                    <div class="result-value" id="result-value">—</div>
+                    <div class="result-details" id="result-details"></div>
+                    <div id="mod-wrap"></div>
+                </div>
+
+                <div class="history" id="history-panel">
+                    <div class="chart-head">
+                        <div class="chart-title">История расчётов</div>
+                        <button class="mini-btn" id="history-clear" type="button">Очистить</button>
+                    </div>
+                    <div class="history-list" id="history-list"></div>
+                </div>
+            </div>
+
+            <div class="charts-panel">
+                <div class="chart-container">
+                    <div class="chart-title">Зависимость C от полосы пропускания B</div>
+                    <div class="chart-host" id="chart-bandwidth-host"></div>
+                    <div class="legend" id="legend-1"></div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-head">
+                        <div class="chart-title">Зависимость C от отношения S/N</div>
+                        <div class="scale-toggle">
+                            <div class="radio-option">
+                                <input type="radio" id="x-lin" name="x-scale" value="lin" checked>
+                                <label for="x-lin">линейная</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="x-log" name="x-scale" value="log">
+                                <label for="x-log">лог.</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-host" id="chart-snr-host"></div>
+                    <div class="legend" id="legend-2"></div>
+                </div>
+
+                <div class="chart-container compare-panel">
+                    <div class="chart-head">
+                        <div class="chart-title">Сравнение каналов <span class="hint">до 3</span></div>
+                        <button class="mini-btn" id="compare-add" type="button">+ Добавить текущий</button>
+                    </div>
+                    <div class="compare-list" id="compare-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+
+        // ===================== DOM =====================
+        const $ = (id) => document.getElementById(id);
+        const bwInput = $('bandwidth');
+        const snrInput = $('snr');
+        const snrUnit = $('snr-unit');
+        const targetInput = $('target-capacity');
+        const targetUnit = $('target-unit');
+        const calcBtn = $('calc-btn');
+        const resultDiv = $('result');
+        const resultLabel = $('result-label');
+        const resultValue = $('result-value');
+        const resultDetails = $('result-details');
+        const modWrap = $('mod-wrap');
+        const historyPanel = $('history-panel');
+        const historyList = $('history-list');
+        const compareListEl = $('compare-list');
+        const host1 = $('chart-bandwidth-host');
+        const legend1 = $('legend-1');
+        const host2 = $('chart-snr-host');
+        const legend2 = $('legend-2');
+        const themeBtn = $('theme-toggle');
+
+        // ===================== Форматирование =====================
+        // «12.50» → «12,5», «12» без изменений
+        function ru(s) {
+            return String(s).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '').replace('.', ',');
+        }
+
+        function fmtCapacity(c) {
+            if (!isFinite(c)) return '—';
+            if (c >= 1e9) return ru((c / 1e9).toFixed(2)) + ' Гбит/с';
+            if (c >= 1e6) return ru((c / 1e6).toFixed(2)) + ' Мбит/с';
+            if (c >= 1e3) return ru((c / 1e3).toFixed(2)) + ' Кбит/с';
+            return ru(c.toFixed(2)) + ' бит/с';
+        }
+
+        function fmtHz(v) {
+            if (v >= 1e9) return ru((v / 1e9).toFixed(2)) + ' ГГц';
+            if (v >= 1e6) return ru((v / 1e6).toFixed(2)) + ' МГц';
+            if (v >= 1e3) return ru((v / 1e3).toFixed(2)) + ' кГц';
+            return ru(v.toFixed(2)) + ' Гц';
+        }
+
+        function fmtCompact(v) {
+            if (!isFinite(v)) return '∞';
+            if (Math.abs(v) >= 1e12) return ru((v / 1e12).toFixed(1)) + 'Т';
+            if (Math.abs(v) >= 1e9) return ru((v / 1e9).toFixed(1)) + 'Г';
+            if (Math.abs(v) >= 1e6) return ru((v / 1e6).toFixed(1)) + 'М';
+            if (Math.abs(v) >= 1e3) return ru((v / 1e3).toFixed(1)) + 'К';
+            if (Math.abs(v) >= 100) return ru(v.toFixed(0));
+            if (Math.abs(v) >= 1) return ru(v.toFixed(1));
+            if (v === 0) return '0';
+            return ru(v.toPrecision(2));
+        }
+
+        function fmtNumPlain(v) {
+            if (!isFinite(v)) return '∞';
+            if (Math.abs(v) >= 1e9) return ru((v / 1e9).toFixed(2)) + ' Г';
+            if (Math.abs(v) >= 1e6) return ru((v / 1e6).toFixed(2)) + ' М';
+            if (Math.abs(v) >= 1e4) return ru((v / 1e3).toFixed(2)) + ' К';
+            if (Math.abs(v) >= 100) return ru(v.toFixed(0));
+            if (Math.abs(v) >= 1) return ru(v.toFixed(2));
+            if (v === 0) return '0';
+            return ru(v.toPrecision(2));
+        }
+
+        function fmtDbVal(ratio) {
+            if (!(ratio > 0)) return '—';
+            return ru((10 * Math.log10(ratio)).toFixed(1)) + ' дБ';
+        }
+
+        function snrText(val, fmt) {
+            return fmt === 'db'
+                ? ru(val.toFixed(2)) + ' дБ'
+                : fmtNumPlain(val) + ' раз';
+        }
+
+        const UNIT_SCALE = { bits: 1, k: 1e3, M: 1e6, G: 1e9 };
+
+        // ===================== Состояние =====================
+        const STORAGE_KEY = 'shannonCalcState';
+        const state = {
+            compare: [],   // {b, snrVal, snrFmt, label} — до 3
+            history: []    // до 8 последних расчётов
+        };
+
+        function saveState() {
+            try {
+                const data = {
+                    mode: document.querySelector('input[name="calc-mode"]:checked').value,
+                    snrFmt: document.querySelector('input[name="snr-format"]:checked').value,
+                    bRaw: bwInput.value,
+                    snrRaw: snrInput.value,
+                    tRaw: targetInput.value,
+                    tUnit: targetUnit.value,
+                    xscale: document.querySelector('input[name="x-scale"]:checked').value,
+                    theme: document.body.dataset.theme === 'light' ? 'light' : 'dark',
+                    compare: state.compare,
+                    history: state.history.slice(0, 8)
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) { /* localStorage недоступен — не критично */ }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                if (data.theme === 'light') applyTheme('light');
+                if (Array.isArray(data.compare)) state.compare = data.compare.slice(0, 3);
+                if (Array.isArray(data.history)) state.history = data.history.slice(0, 8);
+                if (data.mode && ['C', 'B', 'snr'].includes(data.mode)) {
+                    document.querySelector('input[name="calc-mode"][value="' + data.mode + '"]').checked = true;
+                }
+                if (data.snrFmt === 'db' || data.snrFmt === 'ratio') {
+                    document.querySelector('input[name="snr-format"][value="' + data.snrFmt + '"]').checked = true;
+                }
+                if (data.xscale === 'log') $('x-log').checked = true;
+                if (data.bRaw) bwInput.value = data.bRaw;
+                if (data.snrRaw) snrInput.value = data.snrRaw;
+                if (data.tRaw) targetInput.value = data.tRaw;
+                if (data.tUnit && UNIT_SCALE[data.tUnit]) targetUnit.value = data.tUnit;
+            } catch (e) { /* повреждённое состояние — просто начнём с дефолтов */ }
+        }
+
+        function applyHash() {
+            const h = location.hash.replace(/^#/, '');
+            if (!h) return;
+            let p;
+            try { p = new URLSearchParams(h); } catch (e) { return; }
+            const b = parseFloat(p.get('b'));
+            if (isFinite(b) && b > 0) bwInput.value = String(b);
+            const s = parseFloat(p.get('s'));
+            if (isFinite(s) && s >= 0) snrInput.value = String(s);
+            if (p.get('f') === 'db' || p.get('f') === 'ratio') {
+                document.querySelector('input[name="snr-format"][value="' + p.get('f') + '"]').checked = true;
+            }
+            const m = p.get('m');
+            if (['C', 'B', 'snr'].includes(m)) {
+                document.querySelector('input[name="calc-mode"][value="' + m + '"]').checked = true;
+            }
+            const cu = p.get('u');
+            if (UNIT_SCALE[cu]) targetUnit.value = cu;
+            const t = parseFloat(p.get('t'));
+            if (isFinite(t) && t > 0) targetInput.value = String(t);
+            if (p.get('ls') === 'log') $('x-log').checked = true;
+            else if (p.get('ls') === 'lin') $('x-lin').checked = true;
+            if (p.get('th') === 'light' || p.get('th') === 'dark') applyTheme(p.get('th'));
+        }
+
+        // ===================== Тема =====================
+        function applyTheme(t) {
+            document.body.dataset.theme = t === 'light' ? 'light' : 'dark';
+            themeBtn.textContent = t === 'light' ? 'Тёмная тема' : 'Светлая тема';
+        }
+
+        themeBtn.addEventListener('click', () => {
+            applyTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+            saveState();
+            refreshCharts();
+        });
+
+        // ===================== Пресеты =====================
+        const PRESETS = [
+            { name: 'Телефонный канал', b: 3100, snrDb: 30 },
+            { name: 'Bluetooth', b: 1e6, snrDb: 20 },
+            { name: 'Wi-Fi', b: 20e6, snrDb: 25 },
+            { name: 'LTE', b: 20e6, snrDb: 10 },
+            { name: '5G NR', b: 100e6, snrDb: 15 },
+            { name: 'DVB-S', b: 36e6, snrDb: 8 }
+        ];
+
+        function renderPresets() {
+            const wrap = $('preset-chips');
+            wrap.innerHTML = '';
+            PRESETS.forEach(p => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'chip';
+                btn.textContent = p.name;
+                btn.title = fmtHz(p.b) + ', S/N ' + p.snrDb + ' дБ';
+                btn.addEventListener('click', () => {
+                    if (inp.mode() !== 'B') bwInput.value = String(p.b);
+                    if (inp.mode() !== 'snr') {
+                        document.querySelector('input[name="snr-format"][value="db"]').checked = true;
+                        snrInput.value = String(p.snrDb);
+                        snrUnit.textContent = 'дБ';
+                    }
+                    calculate(true);
+                });
+                wrap.appendChild(btn);
+            });
+        }
+
+        // текущий режим
+        function currentMode() {
+            return document.querySelector('input[name="calc-mode"]:checked').value;
+        }
+        const inp = { mode: currentMode };
+
+        function updateModeUI() {
+            const mode = currentMode();
+            $('group-bandwidth').classList.toggle('hidden', mode === 'B');
+            $('group-snr').classList.toggle('hidden', mode === 'snr');
+            $('group-snr-value').classList.toggle('hidden', mode === 'snr');
+            $('group-target').classList.toggle('hidden', mode === 'C');
+        }
+
+        // ===================== Ввод-чтение =====================
+        function currentInputs() {
+            const mode = currentMode();
+            const fmt = document.querySelector('input[name="snr-format"]:checked').value;
+            const read = (el) => parseFloat(String(el.value).trim().replace(',', '.'));
+            const b = mode === 'B' ? null : read(bwInput);
+            const snrVal = mode === 'snr' ? null : read(snrInput);
+            const snrRatio = snrVal == null || isNaN(snrVal)
+                ? null
+                : (fmt === 'db' ? Math.pow(10, snrVal / 10) : snrVal);
+            const tc = mode === 'C'
+                ? null
+                : read(targetInput) * UNIT_SCALE[targetUnit.value];
+            return { mode, fmt, b, snrVal, snrRatio, tc };
+        }
+
+        function makeErr(msg) { return { error: true, msg }; }
+
+        function solve(x) {
+            if (x.mode === 'C') {
+                if (!isFinite(x.b) || x.b <= 0) return makeErr('Введите корректную положительную полосу пропускания.');
+                if (!isFinite(x.snrVal) || x.snrVal < 0) return makeErr('Введите корректное неотрицательное значение S/N.');
+                return { mode: 'C', b: x.b, ratio: x.snrRatio, c: x.b * Math.log2(1 + x.snrRatio) };
+            }
+            if (x.mode === 'B') {
+                if (!isFinite(x.snrVal) || x.snrVal <= 0) return makeErr('Для расчёта полосы значение S/N должно быть больше нуля.');
+                if (!isFinite(x.tc) || x.tc <= 0) return makeErr('Введите корректную положительную целевую скорость.');
+                return { mode: 'B', b: x.tc / Math.log2(1 + x.snrRatio), ratio: x.snrRatio, c: x.tc };
+            }
+            if (!isFinite(x.b) || x.b <= 0) return makeErr('Введите корректную положительную полосу пропускания.');
+            if (!isFinite(x.tc) || x.tc <= 0) return makeErr('Введите корректную положительную целевую скорость.');
+            const ratio = Math.pow(2, x.tc / x.b) - 1;
+            if (!isFinite(ratio) || !(ratio > 0)) return makeErr('Цель недостижима: указанная скорость слишком велика для такой полосы.');
+            return { mode: 'snr', b: x.b, ratio, c: x.tc };
+        }
+
+        // ===================== Вывод результата =====================
+        let lastGood = null;   // {s, x} последнего успешного расчёта
+        let lastSummary = '';
+
+        function describeCalc(s, x) {
+            if (s.mode === 'C') return 'B = ' + fmtHz(s.b) + ', S/N = ' + snrText(x.snrVal, x.fmt);
+            if (s.mode === 'B') return 'S/N = ' + snrText(x.snrVal, x.fmt) + ', цель C = ' + fmtCapacity(s.c);
+            return 'B = ' + fmtHz(s.b) + ', цель C = ' + fmtCapacity(s.c);
+        }
+
+        function showResult(s, x) {
+            resultDiv.classList.remove('error');
+            resultDiv.classList.add('show');
+            const eta = Math.log2(1 + s.ratio);
+
+            let label, value;
+            if (s.mode === 'C') {
+                label = 'Пропускная способность канала';
+                value = fmtCapacity(s.c);
+            } else if (s.mode === 'B') {
+                label = 'Требуемая полоса пропускания';
+                value = fmtHz(s.b);
+            } else {
+                label = 'Требуемое отношение сигнал/шум';
+                value = fmtNumPlain(s.ratio) + ' раз (' + ru((10 * Math.log10(s.ratio)).toFixed(2)) + ' дБ)';
+            }
+            resultLabel.textContent = label;
+            resultValue.textContent = value;
+
+            let d = '<strong>Исходные данные:</strong><br>';
+            if (s.mode !== 'snr') {
+                d += '• S/N: ' + snrText(x.snrVal, x.fmt);
+                d += x.fmt === 'db'
+                    ? ' (' + fmtNumPlain(s.ratio) + ' раз)<br>'
+                    : ' (' + ru((10 * Math.log10(s.ratio)).toFixed(2)) + ' дБ)<br>';
+            }
+            if (s.mode !== 'B') d += '• Полоса B: ' + fmtHz(s.b) + '<br>';
+            if (s.mode !== 'C') d += '• Целевая скорость C: ' + fmtCapacity(s.c) + '<br>';
+            d += '<br><strong>Пропускная способность C:</strong> ' + fmtCapacity(s.c) + '<br>';
+            d += '• Спектральная эффективность: ' + fmtNumPlain(eta) + ' бит/с/Гц';
+            resultDetails.innerHTML = d;
+
+            lastSummary = label + ': ' + value + ' (' + describeCalc(s, x) + ')';
+        }
+
+        function showError(msg) {
+            resultDiv.classList.add('show', 'error');
+            resultLabel.textContent = 'Ошибка';
+            resultValue.textContent = 'Ошибка';
+            resultDetails.textContent = msg;
+            modWrap.innerHTML = '';
+            lastSummary = '';
+        }
+
+        // ===================== Таблица модуляций =====================
+        const MODULATIONS = [
+            ['BPSK', 1], ['QPSK', 2], ['16-QAM', 4], ['64-QAM', 6], ['256-QAM', 8]
+        ];
+
+        function renderModTable(s) {
+            const eta = Math.log2(1 + s.ratio);
+            if (!(s.b > 0) || !isFinite(eta)) { modWrap.innerHTML = ''; return; }
+            let best = 0;
+            MODULATIONS.forEach(([, m]) => { if (m <= eta + 1e-9) best = Math.max(best, m); });
+
+            const rows = MODULATIONS.map(([name, m]) => {
+                const att = m <= eta + 1e-9;
+                const minDb = 10 * Math.log10(Math.pow(2, m) - 1);
+                const cls = att ? 'att' + (m === best ? ' best' : '') : '';
+                return '<tr class="' + cls + '"><td>' + name + '</td><td>' + m + '</td><td>'
+                    + ru(minDb.toFixed(1)) + ' дБ</td><td>' + fmtCapacity(s.b * m) + '</td></tr>';
+            }).join('');
+
+            let note;
+            if (best === 0) {
+                note = 'Ни одна из модуляций не укладывается в предел Шеннона (η < 1 бит/с/Гц).';
+            } else {
+                const bestName = MODULATIONS.find(p => p[1] === best)[0];
+                note = 'Предел Шеннона — ' + ru(eta.toFixed(2)) + ' бит/с/Гц. Максимальная достижимая модуляция — '
+                    + bestName + ' (' + best + ' бит/с/Гц), запас '
+                    + ru((eta - best).toFixed(2)) + ' бит/с/Гц.';
+            }
+            modWrap.innerHTML =
+                '<table class="mod-table"><thead><tr><th>Модуляция</th><th>бит/с/Гц</th><th>Мин. S/N</th><th>Скорость</th></tr></thead>'
+                + '<tbody>' + rows + '</tbody></table>'
+                + '<p class="mod-note">' + note + '</p>';
+        }
+
+        // ===================== SVG-графики =====================
+        const PALETTE = ['#F472B6', '#FACC15', '#34D399'];
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+
+        function svgEl(name, attrs) {
+            const n = document.createElementNS(SVG_NS, name);
+            for (const k in (attrs || {})) n.setAttribute(k, attrs[k]);
+            return n;
+        }
+
+        function svgText(x, y, s, attrs) {
+            const n = svgEl('text', attrs || {});
+            n.setAttribute('x', x);
+            n.setAttribute('y', y);
+            n.textContent = s;
+            return n;
+        }
+
+        function themeVars() {
+            const cs = getComputedStyle(document.body);
+            return {
+                grid: cs.getPropertyValue('--chart-grid').trim(),
+                tick: cs.getPropertyValue('--chart-tick').trim(),
+                accent: cs.getPropertyValue('--accent').trim(),
+                chipText: cs.getPropertyValue('--surface-0').trim(),
+                text: cs.getPropertyValue('--text-secondary').trim()
+            };
+        }
+
+        function niceTicks(min, max, count) {
+            count = count || 5;
+            if (!(max > min)) max = min + 1;
+            const raw = (max - min) / count;
+            const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+            let step = mag * 10;
+            for (const mul of [1, 2, 5, 10]) {
+                if (mag * mul >= raw - 1e-12) { step = mag * mul; break; }
+            }
+            const ticks = [];
+            let t = Math.ceil(min / step) * step;
+            for (; t <= max + step * 1e-6; t += step) {
+                ticks.push(Math.abs(t) < step * 1e-6 ? 0 : t);
+            }
+            return ticks;
+        }
+
+        function logTicks(min, max) {
+            const e0 = Math.ceil(Math.log10(Math.max(min, 1e-9)) - 1e-9);
+            const e1 = Math.floor(Math.log10(max) + 1e-9);
+            const decades = e1 - e0;
+            const mant = decades > 7 ? [1] : (decades > 4 ? [1, 2] : [1, 2, 5]);
+            const ticks = [];
+            for (let e = e0; e <= e1; e++) {
+                const p = Math.pow(10, e);
+                for (const mul of mant) {
+                    const v = mul * p;
+                    if (v >= min * 0.9999 && v <= max * 1.0001) ticks.push(v);
+                }
+            }
+            return ticks;
+        }
+
+        function unitFor(maxY) {
+            const a = Math.abs(maxY);
+            if (a >= 1e9) return { s: 1e9, l: 'Гбит/с' };
+            if (a >= 1e6) return { s: 1e6, l: 'Мбит/с' };
+            if (a >= 1e3) return { s: 1e3, l: 'Кбит/с' };
+            return { s: 1, l: 'бит/с' };
+        }
+
+        function sampleAt(points, x) {
+            if (x <= points[0].x) return points[0].y;
+            for (let i = 1; i < points.length; i++) {
+                if (points[i].x >= x) {
+                    const p0 = points[i - 1], p1 = points[i];
+                    const t = (x - p0.x) / ((p1.x - p0.x) || 1);
+                    return p0.y + (p1.y - p0.y) * t;
+                }
+            }
+            return points[points.length - 1].y;
+        }
+
+        function renderLegend(legendEl, cfg) {
+            legendEl.innerHTML = cfg.series.map(s =>
+                '<span class="legend-item"><i class="dot" style="background:'
+                + s.color + '"></i>' + (s.label || '') + '</span>'
+            ).join('');
+        }
+
+        function drawChart(host, legendEl, cfg) {
+            const t = themeVars();
+            const W = Math.max(host.clientWidth || 0, 320);
+            const H = 250;
+            const m = { t: 18, r: 24, b: 38, l: 62 };
+            const pw = Math.max(W - m.l - m.r, 10);
+            const ph = Math.max(H - m.t - m.b, 10);
+
+            // домены по всем сериям
+            const all = [];
+            cfg.series.forEach(s => s.points.forEach(p => all.push(p)));
+            let xmin = Infinity, xmax = -Infinity;
+            all.forEach(p => {
+                if (p.x < xmin) xmin = p.x;
+                if (p.x > xmax) xmax = p.x;
+            });
+            if (cfg.marker) { xmin = Math.min(xmin, cfg.marker.x); xmax = Math.max(xmax, cfg.marker.x); }
+            if (cfg.xScale === 'log' && xmin <= 0) cfg.xScale = 'lin';
+
+            const ys = all.map(p => p.y);
+            if (cfg.targetY != null) ys.push(cfg.targetY);
+            if (cfg.marker) ys.push(cfg.marker.y);
+            let ymin = Math.min.apply(null, ys), ymax = Math.max.apply(null, ys);
+            const ypad = (ymax - ymin) * 0.08 || Math.abs(ymax) * 0.1 || 1;
+            ymin -= ypad;
+            ymax += ypad;
+
+            const unit = unitFor(ymax);
+            const xToPx = cfg.xScale === 'log'
+                ? v => m.l + (Math.log10(v) - Math.log10(xmin)) / (Math.log10(xmax) - Math.log10(xmin)) * pw
+                : v => m.l + (v - xmin) / (xmax - xmin) * pw;
+            const yToPx = v => m.t + ph - (v - ymin) / (ymax - ymin) * ph;
+
+            host.innerHTML = '';
+            const svg = svgEl('svg', {
+                viewBox: '0 0 ' + W + ' ' + H,
+                class: 'chart-svg',
+                preserveAspectRatio: 'xMidYMid meet'
+            });
+
+            // градиент под основную кривую
+            const defs = svgEl('defs');
+            const grad = svgEl('linearGradient', { id: 'grad-' + host.id, x1: 0, y1: 0, x2: 0, y2: 1 });
+            grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': t.accent, 'stop-opacity': 0.35 }));
+            grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': t.accent, 'stop-opacity': 0.02 }));
+            defs.appendChild(grad);
+            svg.appendChild(defs);
+
+            // сетка + подписи
+            const xTicks = cfg.xScale === 'log' ? logTicks(xmin, xmax) : niceTicks(xmin, xmax, 6);
+            const yTicks = niceTicks(ymin, ymax, 5);
+            xTicks.forEach(v => {
+                const px = xToPx(v);
+                svg.appendChild(svgEl('line', { x1: px, y1: m.t, x2: px, y2: m.t + ph, stroke: t.grid, 'stroke-width': 1 }));
+                svg.appendChild(svgText(px, H - 12, fmtCompact(v), {
+                    'text-anchor': 'middle', 'font-size': 10, fill: t.tick
+                }));
+            });
+            yTicks.forEach(v => {
+                const py = yToPx(v);
+                svg.appendChild(svgEl('line', { x1: m.l, y1: py, x2: m.l + pw, y2: py, stroke: t.grid, 'stroke-width': 1 }));
+                svg.appendChild(svgText(m.l - 8, py + 3.5, fmtCompact(v / unit.s), {
+                    'text-anchor': 'end', 'font-size': 10, fill: t.tick
+                }));
+            });
+
+            // рамка области
+            svg.appendChild(svgEl('rect', {
+                x: m.l, y: m.t, width: pw, height: ph,
+                fill: 'none', stroke: t.grid, 'stroke-width': 1.2
+            }));
+
+            // линия цели
+            if (cfg.targetY != null) {
+                const py = yToPx(cfg.targetY);
+                svg.appendChild(svgEl('line', {
+                    x1: m.l, y1: py, x2: m.l + pw, y2: py,
+                    stroke: t.text, 'stroke-width': 1.2, 'stroke-dasharray': '6 4', opacity: 0.8
+                }));
+                svg.appendChild(svgText(m.l + pw - 4, py - 5, 'Цель: ' + fmtCapacity(cfg.targetY), {
+                    'text-anchor': 'end', 'font-size': 10, fill: t.text, opacity: 0.85
+                }));
+            }
+
+            // кривые
+            cfg.series.forEach(s => {
+                const pts = s.points;
+                const lineD = pts.map((p, i) => (i ? 'L' : 'M') + xToPx(p.x).toFixed(1) + ',' + yToPx(p.y).toFixed(1)).join(' ');
+                if (s.fill) {
+                    const areaD = lineD + ' L' + xToPx(pts[pts.length - 1].x).toFixed(1) + ',' + (m.t + ph)
+                        + ' L' + xToPx(pts[0].x).toFixed(1) + ',' + (m.t + ph) + ' Z';
+                    svg.appendChild(svgEl('path', { d: areaD, fill: 'url(#grad-' + host.id + ')', stroke: 'none' }));
+                }
+                svg.appendChild(svgEl('path', {
+                    d: lineD, fill: 'none', stroke: s.color, 'stroke-width': s.fill ? 2 : 1.75,
+                    'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+                    'stroke-dasharray': s.dashed ? '5 4' : 'none'
+                }));
+            });
+
+            // маркер текущей точки
+            if (cfg.marker) {
+                const px = xToPx(cfg.marker.x), py = yToPx(cfg.marker.y);
+                svg.appendChild(svgEl('line', {
+                    x1: px, y1: m.t, x2: px, y2: m.t + ph,
+                    stroke: t.accent, 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0.6
+                }));
+                svg.appendChild(svgEl('circle', {
+                    cx: px, cy: py, r: 4.5, fill: t.accent,
+                    stroke: t.chipText, 'stroke-width': 1.5
+                }));
+                const label = cfg.markerLabel || '';
+                const chipW = label.length * 6.4 + 14;
+                let chipX = px + 10;
+                if (chipX + chipW > W - 8) chipX = px - 10 - chipW;
+                if (chipX < 8) chipX = 8;
+                let chipY = py - 30;
+                if (chipY < m.t) chipY = py + 12;
+                svg.appendChild(svgEl('rect', {
+                    x: chipX, y: chipY, width: chipW, height: 20, rx: 5,
+                    fill: t.accent, opacity: 0.95
+                }));
+                svg.appendChild(svgText(chipX + 7, chipY + 14, label, {
+                    'text-anchor': 'start', 'font-size': 10, fill: t.chipText, 'font-weight': 600
+                }));
+            }
+
+            // подписи осей
+            svg.appendChild(svgText(W - 6, H - 2, cfg.xCaption || '', {
+                'text-anchor': 'end', 'font-size': 10, fill: t.tick
+            }));
+            svg.appendChild(svgText(8, 10, 'C, ' + unit.l, {
+                'text-anchor': 'start', 'font-size': 10, fill: t.tick
+            }));
+
+            // слой наведения
+            const hoverGroup = svgEl('g', { 'pointer-events': 'none' });
+            const guide = svgEl('line', { y1: m.t, y2: m.t + ph, stroke: t.accent, 'stroke-width': 1, opacity: 0 });
+            hoverGroup.appendChild(guide);
+            const dots = cfg.series.map(() => {
+                const c = svgEl('circle', { r: 3, fill: '#fff', opacity: 0 });
+                hoverGroup.appendChild(c);
+                return c;
+            });
+            svg.appendChild(hoverGroup);
+
+            const overlay = svgEl('rect', {
+                x: m.l, y: m.t, width: pw, height: ph,
+                fill: 'transparent', 'pointer-events': 'all', style: 'cursor:crosshair'
+            });
+            svg.appendChild(overlay);
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'chart-tooltip';
+            host.appendChild(svg);
+            host.appendChild(tooltip);
+
+            overlay.addEventListener('pointermove', (e) => {
+                const rect = svg.getBoundingClientRect();
+                const mx = (e.clientX - rect.left) / rect.width * W;
+                if (mx < m.l || mx > m.l + pw) { tooltip.classList.remove('show'); guide.setAttribute('opacity', 0); return; }
+                // ближайшая точка основной серии по пикселям
+                const primary = cfg.series[0].points;
+                let bi = 0, bd = Infinity;
+                primary.forEach((p, i) => {
+                    const d = Math.abs(xToPx(p.x) - mx);
+                    if (d < bd) { bd = d; bi = i; }
+                });
+                const hx = primary[bi].x;
+                const px = xToPx(hx);
+                guide.setAttribute('x1', px);
+                guide.setAttribute('x2', px);
+                guide.setAttribute('opacity', 0.5);
+
+                let html = '<div class="tt-x">' + (cfg.hoverX ? cfg.hoverX(hx) : fmtCompact(hx)) + '</div>';
+                cfg.series.forEach((s, i) => {
+                    const y = sampleAt(s.points, hx);
+                    const py = yToPx(y);
+                    dots[i].setAttribute('cx', px);
+                    dots[i].setAttribute('cy', py);
+                    dots[i].setAttribute('fill', s.color);
+                    dots[i].setAttribute('stroke', t.chipText);
+                    dots[i].setAttribute('opacity', 1);
+                    html += '<div class="tt-row"><i class="tt-dot" style="background:' + s.color
+                        + '"></i>' + (s.label || '') + ': ' + fmtCapacity(y) + '</div>';
+                });
+                tooltip.innerHTML = html;
+                const pct = px / W * 100;
+                tooltip.style.left = pct + '%';
+                tooltip.style.transform = pct > 58 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)';
+                tooltip.classList.add('show');
+            });
+            overlay.addEventListener('pointerleave', () => {
+                tooltip.classList.remove('show');
+                guide.setAttribute('opacity', 0);
+                dots.forEach(d => d.setAttribute('opacity', 0));
+            });
+
+            renderLegend(legendEl, cfg);
+        }
+
+        let lastCfg1 = null, lastCfg2 = null;
+
+        // пересборка графиков из последнего успешного расчёта
+        // (нужна при смене шкалы/темы/списка сравнения — серии хранятся в конфиге)
+        function refreshCharts() {
+            if (lastGood) buildCharts(lastGood.s);
+            else redrawCharts();
+        }
+
+        function redrawCharts() {
+            if (lastCfg1) drawChart(host1, legend1, lastCfg1);
+            if (lastCfg2) drawChart(host2, legend2, lastCfg2);
+        }
+
+        // ===================== Данные для графиков =====================
+        function sweepCvsB(b, ratio, n) {
+            const pts = [];
+            const lo = b * 0.2, hi = b * 2;
+            for (let i = 0; i <= n; i++) {
+                const x = lo + (hi - lo) * i / n;
+                pts.push({ x, y: x * Math.log2(1 + ratio) });
+            }
+            return pts;
+        }
+
+        function sweepCvsSnr(b, ratio, n) {
+            let lo = ratio * 0.1, hi = ratio * 3;
+            if (!(hi > lo)) { lo = 0; hi = 1; }
+            const pts = [];
+            for (let i = 0; i <= n; i++) {
+                const x = lo + (hi - lo) * i / n;
+                pts.push({ x, y: b * Math.log2(1 + x) });
+            }
+            return pts;
+        }
+
+        function buildCharts(s) {
+            const t = themeVars();
+            const cmp = state.compare.map((e, i) => ({
+                color: PALETTE[i % PALETTE.length],
+                label: e.label,
+                b: e.b,
+                ratio: e.snrFmt === 'db' ? Math.pow(10, e.snrVal / 10) : e.snrVal
+            }));
+
+            const series1 = [{ points: sweepCvsB(s.b, s.ratio, 40), color: t.accent, label: 'Текущий', fill: true }];
+            const series2 = [{ points: sweepCvsSnr(s.b, s.ratio, 45), color: t.accent, label: 'Текущий', fill: true }];
+            cmp.forEach(c => {
+                series1.push({ points: sweepCvsB(c.b, c.ratio, 40), color: c.color, label: c.label, dashed: true });
+                series2.push({ points: sweepCvsSnr(c.b, c.ratio, 45), color: c.color, label: c.label, dashed: true });
+            });
+
+            const target = s.mode === 'C' ? null : s.c;
+            const useLog = document.querySelector('input[name="x-scale"]:checked').value === 'log' && s.ratio > 0;
+
+            lastCfg1 = {
+                series: series1, xScale: 'lin', targetY: target,
+                marker: { x: s.b, y: s.c },
+                markerLabel: fmtHz(s.b) + ' → ' + fmtCapacity(s.c),
+                xCaption: 'Полоса B, Гц',
+                hoverX: x => fmtHz(x)
+            };
+            lastCfg2 = {
+                series: series2, xScale: useLog ? 'log' : 'lin', targetY: target,
+                marker: { x: s.ratio, y: s.c },
+                markerLabel: 'S/N = ' + fmtNumPlain(s.ratio) + ' → ' + fmtCapacity(s.c),
+                xCaption: 'S/N, раз',
+                hoverX: x => 'S/N = ' + fmtNumPlain(x) + ' (' + fmtDbVal(x) + ')'
+            };
+            drawChart(host1, legend1, lastCfg1);
+            drawChart(host2, legend2, lastCfg2);
+        }
+
+        // ===================== Основной расчёт =====================
+        function calculate(record) {
+            const x = currentInputs();
+            const s = solve(x);
+            if (s.error) { showError(s.msg); return; }
+            lastGood = { s, x };
+            showResult(s, x);
+            renderModTable(s);
+            buildCharts(s);
+            if (record) pushHistory(s);
+            saveState();
+        }
+
+        // «живой» пересчёт при наборе
+        let debounceTimer = null;
+        function liveCalculate() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => calculate(false), 300);
+        }
+
+        // ===================== История =====================
+        function pushHistory() {
+            if (!lastGood || !lastSummary) return;
+            state.history.unshift({
+                time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                sum: lastSummary,
+                mode: lastGood.s.mode,
+                bRaw: lastGood.x.mode === 'B' ? bwInput.value : String(lastGood.s.b),
+                snrRaw: lastGood.x.mode === 'snr' ? '' : snrInput.value,
+                snrFmt: lastGood.x.fmt,
+                tRaw: lastGood.x.mode === 'C' ? '' : targetInput.value,
+                tUnit: targetUnit.value
+            });
+            state.history = state.history.slice(0, 8);
+            renderHistory();
+        }
+
+        function restoreEntry(h) {
+            document.querySelector('input[name="calc-mode"][value="' + h.mode + '"]').checked = true;
+            document.querySelector('input[name="snr-format"][value="' + h.snrFmt + '"]').checked = true;
+            snrUnit.textContent = h.snrFmt === 'db' ? 'дБ' : 'раз';
+            if (h.bRaw) bwInput.value = h.bRaw;
+            if (h.snrRaw) snrInput.value = h.snrRaw;
+            if (h.tRaw) targetInput.value = h.tRaw;
+            targetUnit.value = h.tUnit || 'M';
+            updateModeUI();
+            calculate(false);
+        }
+
+        function renderHistory() {
+            if (!state.history.length) {
+                historyList.innerHTML = '<div class="empty-hint">Пока пусто — расчёты появятся после «Вычислить», пресетов или Enter.</div>';
+                return;
+            }
+            historyList.innerHTML = state.history.map((h, i) =>
+                '<button class="history-item" data-i="' + i + '" type="button">'
+                + '<span class="hi-time">' + h.time + '</span><span>' + h.sum + '</span></button>'
+            ).join('');
+        }
+
+        historyList.addEventListener('click', (e) => {
+            const item = e.target.closest('.history-item');
+            if (!item) return;
+            const h = state.history[+item.dataset.i];
+            if (h) restoreEntry(h);
+        });
+
+        $('history-clear').addEventListener('click', () => {
+            state.history = [];
+            renderHistory();
+            saveState();
+        });
+
+        // ===================== Сравнение каналов =====================
+        function renderCompare() {
+            if (!state.compare.length) {
+                compareListEl.innerHTML = '<div class="empty-hint">Добавьте до 3 сохранённых каналов — их кривые появятся на обоих графиках.</div>';
+                return;
+            }
+            compareListEl.innerHTML = state.compare.map((e, i) =>
+                '<div class="compare-item"><span class="dot" style="background:'
+                + PALETTE[i % PALETTE.length] + '"></span><span class="ci-label">' + e.label
+                + '</span><button class="mini-btn ci-del" data-i="' + i + '" type="button">✕</button></div>'
+            ).join('');
+        }
+
+        compareListEl.addEventListener('click', (e) => {
+            const del = e.target.closest('.ci-del');
+            if (!del) return;
+            state.compare.splice(+del.dataset.i, 1);
+            renderCompare();
+            saveState();
+            refreshCharts();
+        });
+
+        $('compare-add').addEventListener('click', () => {
+            if (!lastGood) { calculate(false); }
+            if (!lastGood) return;
+            const s = lastGood.s, x = lastGood.x;
+            state.compare.push({
+                b: s.b,
+                snrVal: s.ratio,
+                snrFmt: 'ratio',
+                label: fmtHz(s.b) + ', S/N ' + fmtNumPlain(s.ratio) + ' раз (' + fmtDbVal(s.ratio) + ')'
+            });
+            if (state.compare.length > 3) state.compare.shift();
+            renderCompare();
+            saveState();
+            refreshCharts();
+        });
+
+        // ===================== Копирование и ссылка =====================
+        function copyText(text, btn) {
+            const done = () => {
+                const orig = btn.dataset.orig || btn.textContent;
+                btn.dataset.orig = orig;
+                btn.textContent = 'Скопировано ✓';
+                setTimeout(() => { btn.textContent = orig; }, 1600);
+            };
+            const fallback = () => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); done(); } catch (e) { /* нет доступа */ }
+                document.body.removeChild(ta);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, fallback);
+            } else {
+                fallback();
+            }
+        }
+
+        $('copy-result-btn').addEventListener('click', () => {
+            if (!lastSummary) { calculate(false); }
+            if (lastSummary) copyText(lastSummary, $('copy-result-btn'));
+        });
+
+        $('share-btn').addEventListener('click', () => {
+            const p = new URLSearchParams();
+            p.set('b', bwInput.value);
+            const s = document.querySelector('input[name="snr-format"]:checked').value;
+            p.set('f', s);
+            p.set('s', snrInput.value);
+            p.set('m', currentMode());
+            p.set('t', targetInput.value);
+            p.set('u', targetUnit.value);
+            p.set('ls', document.querySelector('input[name="x-scale"]:checked').value);
+            p.set('th', document.body.dataset.theme === 'light' ? 'light' : 'dark');
+            location.hash = p.toString();
+            copyText(location.href, $('share-btn'));
+        });
+
+        // ===================== Обработчики =====================
+        calcBtn.addEventListener('click', () => calculate(true));
+
+        [bwInput, snrInput, targetInput].forEach(el => {
+            el.addEventListener('input', liveCalculate);
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { clearTimeout(debounceTimer); calculate(true); }
+            });
+        });
+
+        targetUnit.addEventListener('change', () => calculate(false));
+
+        document.querySelectorAll('input[name="snr-format"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const isDb = radio.value === 'db';
+                snrUnit.textContent = isDb ? 'дБ' : 'раз';
+                const v = parseFloat(String(snrInput.value).trim().replace(',', '.'));
+                if (isFinite(v) && v > 0) {
+                    // конвертируем текущее значение в новый формат, чтобы не терять ввод
+                    snrInput.value = isDb
+                        ? ru((10 * Math.log10(v)).toFixed(2))
+                        : ru((Math.pow(10, v / 10)).toFixed(2)).replace(',', '.');
+                }
+                saveState();
+                calculate(false);
+            });
+        });
+
+        document.querySelectorAll('input[name="calc-mode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                updateModeUI();
+                saveState();
+                calculate(false);
+            });
+        });
+
+        document.querySelectorAll('input[name="x-scale"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                saveState();
+                refreshCharts();
+            });
+        });
+
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(redrawCharts, 150);
+        });
+
+        // ===================== Инициализация =====================
+        loadState();
+        applyHash();
+        applyTheme(document.body.dataset.theme === 'light' ? 'light' : 'dark');
+        snrUnit.textContent = document.querySelector('input[name="snr-format"]:checked').value === 'db' ? 'дБ' : 'раз';
+        renderPresets();
+        updateModeUI();
+        renderHistory();
+        renderCompare();
+        calculate(false);
+    })();
+    </script>
+</body>
+</html>
